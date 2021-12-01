@@ -282,7 +282,7 @@ export class EtherscanProvider extends BaseProvider {
                     }
                     const postData = getTransactionPostData(params.transaction);
                     postData.module = "proxy";
-                    postData.action = "eth_call";
+                    postData.action = "klay_call";
                     postData.apikey = this.apiKey;
                     try {
                         return yield get(url, postData);
