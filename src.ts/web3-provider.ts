@@ -29,8 +29,8 @@ type Web3LegacySend = (request: any, callback: (error: Error, response: any) => 
 function buildWeb3LegacyFetcher(provider: ExternalProvider, sendFunc: Web3LegacySend) : JsonRpcFetchFunc {
     return function(method: string, params: Array<any>): Promise<any> {
 
-        // Metamask complains about eth_sign (and on some versions hangs)
-        if (method == "eth_sign" && (provider.isMetaMask || provider.isStatus)) {
+        // Metamask complains about klay_sign (and on some versions hangs)
+        if (method == "klay_sign" && (provider.isMetaMask || provider.isStatus)) {
             // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_sign
             method = "personal_sign";
             params = [ params[1], params[0] ];
@@ -64,8 +64,8 @@ function buildEip1193Fetcher(provider: ExternalProvider): JsonRpcFetchFunc {
     return function(method: string, params: Array<any>): Promise<any> {
         if (params == null) { params = [ ]; }
 
-        // Metamask complains about eth_sign (and on some versions hangs)
-        if (method == "eth_sign" && (provider.isMetaMask || provider.isStatus)) {
+        // Metamask complains about klay_sign (and on some versions hangs)
+        if (method == "klay_sign" && (provider.isMetaMask || provider.isStatus)) {
             // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_sign
             method = "personal_sign";
             params = [ params[1], params[0] ];
