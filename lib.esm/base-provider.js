@@ -41,11 +41,12 @@ function serializeTopics(topics) {
     while (topics.length > 0 && topics[topics.length - 1] == null) {
         topics.pop();
     }
-    return topics.map((topic) => {
+    return topics
+        .map(topic => {
         if (Array.isArray(topic)) {
             // Only track unique OR-topics
             const unique = {};
-            topic.forEach((topic) => {
+            topic.forEach(topic => {
                 unique[checkTopic(topic)] = true;
             });
             // The order of OR-topics does not matter
@@ -56,24 +57,25 @@ function serializeTopics(topics) {
         else {
             return checkTopic(topic);
         }
-    }).join("&");
+    })
+        .join("&");
 }
 function deserializeTopics(data) {
     if (data === "") {
         return [];
     }
-    return data.split(/&/g).map((topic) => {
+    return data.split(/&/g).map(topic => {
         if (topic === "") {
             return [];
         }
-        const comps = topic.split("|").map((topic) => {
-            return ((topic === "null") ? null : topic);
+        const comps = topic.split("|").map(topic => {
+            return topic === "null" ? null : topic;
         });
-        return ((comps.length === 1) ? comps[0] : comps);
+        return comps.length === 1 ? comps[0] : comps;
     });
 }
 function getEventTag(eventName) {
-    if (typeof (eventName) === "string") {
+    if (typeof eventName === "string") {
         eventName = eventName.toLowerCase();
         if (hexDataLength(eventName) === 32) {
             return "tx:" + eventName;
@@ -89,18 +91,21 @@ function getEventTag(eventName) {
         logger.warn("not implemented");
         throw new Error("not implemented");
     }
-    else if (eventName && typeof (eventName) === "object") {
-        return "filter:" + (eventName.address || "*") + ":" + serializeTopics(eventName.topics || []);
+    else if (eventName && typeof eventName === "object") {
+        return ("filter:" +
+            (eventName.address || "*") +
+            ":" +
+            serializeTopics(eventName.topics || []));
     }
     throw new Error("invalid event - " + eventName);
 }
 //////////////////////////////
 // Helper Object
 function getTime() {
-    return (new Date()).getTime();
+    return new Date().getTime();
 }
 function stall(duration) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         setTimeout(resolve, duration);
     });
 }
@@ -161,10 +166,9 @@ export class Event {
         return filter;
     }
     pollable() {
-        return (this.tag.indexOf(":") >= 0 || PollableEvents.indexOf(this.tag) >= 0);
+        return this.tag.indexOf(":") >= 0 || PollableEvents.indexOf(this.tag) >= 0;
     }
 }
-;
 // https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 const coinInfos = {
     "0": { symbol: "btc", p2pkh: 0x00, p2sh: 0x05, prefix: "bc" },
@@ -172,7 +176,7 @@ const coinInfos = {
     "3": { symbol: "doge", p2pkh: 0x1e, p2sh: 0x16 },
     "60": { symbol: "eth", ilk: "eth" },
     "61": { symbol: "etc", ilk: "eth" },
-    "700": { symbol: "xdai", ilk: "eth" },
+    "700": { symbol: "xdai", ilk: "eth" }
 };
 function bytes32ify(value) {
     return hexZeroPad(BigNumber.from(value).toHexString(), 32);
@@ -192,7 +196,7 @@ export class Resolver {
             // keccak256("addr(bytes32,uint256)")
             const transaction = {
                 to: this.address,
-                data: hexConcat([selector, namehash(this.name), (parameters || "0x")])
+                data: hexConcat([selector, namehash(this.name), parameters || "0x"])
             };
             const result = yield this.provider.call(transaction);
             if (result === "0x") {
@@ -220,7 +224,7 @@ export class Resolver {
             if (p2pkh) {
                 const length = parseInt(p2pkh[1], 16);
                 if (p2pkh[2].length === length * 2 && length >= 1 && length <= 75) {
-                    return base58Encode(concat([[coinInfo.p2pkh], ("0x" + p2pkh[2])]));
+                    return base58Encode(concat([[coinInfo.p2pkh], "0x" + p2pkh[2]]));
                 }
             }
         }
@@ -230,7 +234,7 @@ export class Resolver {
             if (p2sh) {
                 const length = parseInt(p2sh[1], 16);
                 if (p2sh[2].length === length * 2 && length >= 1 && length <= 75) {
-                    return base58Encode(concat([[coinInfo.p2sh], ("0x" + p2sh[2])]));
+                    return base58Encode(concat([[coinInfo.p2sh], "0x" + p2sh[2]]));
                 }
             }
         }
@@ -247,7 +251,10 @@ export class Resolver {
             else {
                 version = -1;
             }
-            if (version >= 0 && bytes.length === 2 + length && length >= 1 && length <= 75) {
+            if (version >= 0 &&
+                bytes.length === 2 + length &&
+                length >= 1 &&
+                length <= 75) {
                 const words = bech32.toWords(bytes.slice(2));
                 words.unshift(version);
                 return bech32.encode(coinInfo.prefix, words);
@@ -265,7 +272,7 @@ export class Resolver {
                 // keccak256("addr(bytes32)")
                 const transaction = {
                     to: this.address,
-                    data: ("0x3b3b57de" + namehash(this.name).substring(2))
+                    data: "0x3b3b57de" + namehash(this.name).substring(2)
                 };
                 const hexBytes = yield this.provider.call(transaction);
                 // No address
@@ -305,14 +312,14 @@ export class Resolver {
             if (ipfs) {
                 const length = parseInt(ipfs[3], 16);
                 if (ipfs[4].length === length * 2) {
-                    return "ipfs:/\/" + Base58.encode("0x" + ipfs[1]);
+                    return "ipfs://" + Base58.encode("0x" + ipfs[1]);
                 }
             }
             // Swarm (CID: 1, Type: swarm-manifest; hash/length hard-coded to keccak256/32)
             const swarm = hexBytes.match(/^0xe40101fa011b20([0-9a-f]*)$/);
             if (swarm) {
-                if (swarm[1].length === (32 * 2)) {
-                    return "bzz:/\/" + swarm[1];
+                if (swarm[1].length === 32 * 2) {
+                    return "bzz://" + swarm[1];
                 }
             }
             return logger.throwError(`invalid or unsupported content hash data`, Logger.errors.UNSUPPORTED_OPERATION, {
@@ -329,7 +336,7 @@ export class Resolver {
             // offset 64, with the length at offset 64 and data starting at offset 96
             keyBytes = concat([bytes32ify(64), bytes32ify(keyBytes.length), keyBytes]);
             // Pad to word-size (32 bytes)
-            if ((keyBytes.length % 32) !== 0) {
+            if (keyBytes.length % 32 !== 0) {
                 keyBytes = concat([keyBytes, hexZeroPad("0x", 32 - (key.length % 32))]);
             }
             const hexBytes = yield this._fetchBytes("0x59d1d43c", hexlify(keyBytes));
@@ -362,19 +369,19 @@ export class BaseProvider extends Provider {
         // If network is any, this Provider allows the underlying
         // network to change dynamically, and we auto-detect the
         // current network
-        defineReadOnly(this, "anyNetwork", (network === "any"));
+        defineReadOnly(this, "anyNetwork", network === "any");
         if (this.anyNetwork) {
             network = this.detectNetwork();
         }
         if (network instanceof Promise) {
             this._networkPromise = network;
             // Squash any "unhandled promise" errors; that do not need to be handled
-            network.catch((error) => { });
+            network.catch(error => { });
             // Trigger initial network setting (async)
-            this._ready().catch((error) => { });
+            this._ready().catch(error => { });
         }
         else {
-            const knownNetwork = getStatic((new.target), "getNetwork")(network);
+            const knownNetwork = getStatic(new.target, "getNetwork")(network);
             if (knownNetwork) {
                 defineReadOnly(this, "_network", knownNetwork);
                 this.emit("network", knownNetwork, null);
@@ -426,11 +433,12 @@ export class BaseProvider extends Provider {
     // any change is refelcted); otherwise this cannot change
     get ready() {
         return poll(() => {
-            return this._ready().then((network) => {
+            return this._ready().then(network => {
                 return network;
-            }, (error) => {
+            }, error => {
                 // If the network isn't running yet, we will wait
-                if (error.code === Logger.errors.NETWORK_ERROR && error.event === "noNetwork") {
+                if (error.code === Logger.errors.NETWORK_ERROR &&
+                    error.event === "noNetwork") {
                     return undefined;
                 }
                 throw error;
@@ -446,7 +454,7 @@ export class BaseProvider extends Provider {
     }
     // @TODO: Remove this and just use getNetwork
     static getNetwork(network) {
-        return getNetwork((network == null) ? "homestead" : network);
+        return getNetwork(network == null ? "homestead" : network);
     }
     // Fetches the blockNumber, but will reuse any result that is less
     // than maxAge old or has been requested since the last request
@@ -462,7 +470,7 @@ export class BaseProvider extends Provider {
                     try {
                         // Check the result is not too stale
                         const result = yield internalBlockNumber;
-                        if ((getTime() - result.respTime) <= maxAge) {
+                        if (getTime() - result.respTime <= maxAge) {
                             return result.blockNumber;
                         }
                         // Too old; fetch a new value
@@ -482,7 +490,7 @@ export class BaseProvider extends Provider {
             const reqTime = getTime();
             const checkInternalBlockNumber = resolveProperties({
                 blockNumber: this.perform("getBlockNumber", {}),
-                networkError: this.getNetwork().then((network) => (null), (error) => (error))
+                networkError: this.getNetwork().then(network => null, error => error)
             }).then(({ blockNumber, networkError }) => {
                 if (networkError) {
                     // Unremember this bad internal block number
@@ -502,7 +510,7 @@ export class BaseProvider extends Provider {
             });
             this._internalBlockNumber = checkInternalBlockNumber;
             // Swallow unhandled exceptions; if needed they are handled else where
-            checkInternalBlockNumber.catch((error) => {
+            checkInternalBlockNumber.catch(error => {
                 // Don't null the dead (rejected) fetch, if it has already been updated
                 if (this._internalBlockNumber === checkInternalBlockNumber) {
                     this._internalBlockNumber = null;
@@ -536,7 +544,7 @@ export class BaseProvider extends Provider {
             if (this._emitted.block === -2) {
                 this._emitted.block = blockNumber - 1;
             }
-            if (Math.abs((this._emitted.block) - blockNumber) > 1000) {
+            if (Math.abs(this._emitted.block - blockNumber) > 1000) {
                 logger.warn("network block skew detected; skipping block events");
                 this.emit("error", logger.makeError("network block skew detected", Logger.errors.NETWORK_ERROR, {
                     blockNumber: blockNumber,
@@ -554,7 +562,7 @@ export class BaseProvider extends Provider {
             // The emitted block was updated, check for obsolete events
             if (this._emitted.block !== blockNumber) {
                 this._emitted.block = blockNumber;
-                Object.keys(this._emitted).forEach((key) => {
+                Object.keys(this._emitted).forEach(key => {
                     // The block event does not expire
                     if (key === "block") {
                         return;
@@ -579,18 +587,22 @@ export class BaseProvider extends Provider {
                 this._lastBlockNumber = blockNumber - 1;
             }
             // Find all transaction hashes we are waiting on
-            this._events.forEach((event) => {
+            this._events.forEach(event => {
                 switch (event.type) {
                     case "tx": {
                         const hash = event.hash;
-                        let runner = this.getTransactionReceipt(hash).then((receipt) => {
+                        let runner = this.getTransactionReceipt(hash)
+                            .then(receipt => {
                             if (!receipt || receipt.blockNumber == null) {
                                 return null;
                             }
                             this._emitted["t:" + hash] = receipt.blockNumber;
                             this.emit(hash, receipt);
                             return null;
-                        }).catch((error) => { this.emit("error", error); });
+                        })
+                            .catch((error) => {
+                            this.emit("error", error);
+                        });
                         runners.push(runner);
                         break;
                     }
@@ -598,7 +610,8 @@ export class BaseProvider extends Provider {
                         const filter = event.filter;
                         filter.fromBlock = this._lastBlockNumber + 1;
                         filter.toBlock = blockNumber;
-                        const runner = this.getLogs(filter).then((logs) => {
+                        const runner = this.getLogs(filter)
+                            .then(logs => {
                             if (logs.length === 0) {
                                 return;
                             }
@@ -607,7 +620,10 @@ export class BaseProvider extends Provider {
                                 this._emitted["t:" + log.transactionHash] = log.blockNumber;
                                 this.emit(filter, log);
                             });
-                        }).catch((error) => { this.emit("error", error); });
+                        })
+                            .catch((error) => {
+                            this.emit("error", error);
+                        });
                         runners.push(runner);
                         break;
                     }
@@ -615,9 +631,13 @@ export class BaseProvider extends Provider {
             });
             this._lastBlockNumber = blockNumber;
             // Once all events for this loop have been processed, emit "didPoll"
-            Promise.all(runners).then(() => {
+            Promise.all(runners)
+                .then(() => {
                 this.emit("didPoll", pollId);
-            }).catch((error) => { this.emit("error", error); });
+            })
+                .catch(error => {
+                this.emit("error", error);
+            });
             return;
         });
     }
@@ -679,17 +699,19 @@ export class BaseProvider extends Provider {
         });
     }
     get blockNumber() {
-        this._getInternalBlockNumber(100 + this.pollingInterval / 2).then((blockNumber) => {
+        this._getInternalBlockNumber(100 + this.pollingInterval / 2).then(blockNumber => {
             this._setFastBlockNumber(blockNumber);
-        }, (error) => { });
-        return (this._fastBlockNumber != null) ? this._fastBlockNumber : -1;
+        }, error => { });
+        return this._fastBlockNumber != null ? this._fastBlockNumber : -1;
     }
     get polling() {
-        return (this._poller != null);
+        return this._poller != null;
     }
     set polling(value) {
         if (value && !this._poller) {
-            this._poller = setInterval(() => { this.poll(); }, this.pollingInterval);
+            this._poller = setInterval(() => {
+                this.poll();
+            }, this.pollingInterval);
             if (!this._bootstrapPoll) {
                 this._bootstrapPoll = setTimeout(() => {
                     this.poll();
@@ -716,22 +738,27 @@ export class BaseProvider extends Provider {
         return this._pollingInterval;
     }
     set pollingInterval(value) {
-        if (typeof (value) !== "number" || value <= 0 || parseInt(String(value)) != value) {
+        if (typeof value !== "number" ||
+            value <= 0 ||
+            parseInt(String(value)) != value) {
             throw new Error("invalid polling interval");
         }
         this._pollingInterval = value;
         if (this._poller) {
             clearInterval(this._poller);
-            this._poller = setInterval(() => { this.poll(); }, this._pollingInterval);
+            this._poller = setInterval(() => {
+                this.poll();
+            }, this._pollingInterval);
         }
     }
     _getFastBlockNumber() {
         const now = getTime();
         // Stale block number, request a newer value
-        if ((now - this._fastQueryDate) > 2 * this._pollingInterval) {
+        if (now - this._fastQueryDate > 2 * this._pollingInterval) {
             this._fastQueryDate = now;
-            this._fastBlockNumberPromise = this.getBlockNumber().then((blockNumber) => {
-                if (this._fastBlockNumber == null || blockNumber > this._fastBlockNumber) {
+            this._fastBlockNumberPromise = this.getBlockNumber().then(blockNumber => {
+                if (this._fastBlockNumber == null ||
+                    blockNumber > this._fastBlockNumber) {
                     this._fastBlockNumber = blockNumber;
                 }
                 return this._fastBlockNumber;
@@ -754,10 +781,14 @@ export class BaseProvider extends Provider {
     }
     waitForTransaction(transactionHash, confirmations, timeout) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log("[BASE-PROVIDER] waitForTransaction transactionHash : ", transactionHash);
+            console.log("[BASE-PROVIDER] waitForTransaction confirmations : ", confirmations);
+            console.log("[BASE-PROVIDER] waitForTransaction timeout : ", timeout);
             if (confirmations == null) {
                 confirmations = 1;
             }
             const receipt = yield this.getTransactionReceipt(transactionHash);
+            console.log("[BASE-PROVIDER] waitForTransaction receipt : ", receipt);
             // Receipt is already good
             if ((receipt ? receipt.confirmations : 0) >= confirmations) {
                 return receipt;
@@ -781,7 +812,7 @@ export class BaseProvider extends Provider {
                     resolve(receipt);
                 };
                 this.on(transactionHash, handler);
-                if (typeof (timeout) === "number" && timeout > 0) {
+                if (typeof timeout === "number" && timeout > 0) {
                     timer = setTimeout(() => {
                         if (done) {
                             return;
@@ -789,7 +820,9 @@ export class BaseProvider extends Provider {
                         timer = null;
                         done = true;
                         this.removeListener(transactionHash, handler);
-                        reject(logger.makeError("timeout exceeded", Logger.errors.TIMEOUT, { timeout: timeout }));
+                        reject(logger.makeError("timeout exceeded", Logger.errors.TIMEOUT, {
+                            timeout: timeout
+                        }));
                     }, timeout);
                     if (timer.unref) {
                         timer.unref();
@@ -813,7 +846,8 @@ export class BaseProvider extends Provider {
             catch (error) {
                 return logger.throwError("bad result from backend", Logger.errors.SERVER_ERROR, {
                     method: "getGasPrice",
-                    result, error
+                    result,
+                    error
                 });
             }
         });
@@ -832,7 +866,9 @@ export class BaseProvider extends Provider {
             catch (error) {
                 return logger.throwError("bad result from backend", Logger.errors.SERVER_ERROR, {
                     method: "getBalance",
-                    params, result, error
+                    params,
+                    result,
+                    error
                 });
             }
         });
@@ -851,7 +887,9 @@ export class BaseProvider extends Provider {
             catch (error) {
                 return logger.throwError("bad result from backend", Logger.errors.SERVER_ERROR, {
                     method: "getTransactionCount",
-                    params, result, error
+                    params,
+                    result,
+                    error
                 });
             }
         });
@@ -870,7 +908,9 @@ export class BaseProvider extends Provider {
             catch (error) {
                 return logger.throwError("bad result from backend", Logger.errors.SERVER_ERROR, {
                     method: "getCode",
-                    params, result, error
+                    params,
+                    result,
+                    error
                 });
             }
         });
@@ -881,7 +921,7 @@ export class BaseProvider extends Provider {
             const params = yield resolveProperties({
                 address: this._getAddress(addressOrName),
                 blockTag: this._getBlockTag(blockTag),
-                position: Promise.resolve(position).then((p) => hexValue(p))
+                position: Promise.resolve(position).then(p => hexValue(p))
             });
             const result = yield this.perform("getStorageAt", params);
             try {
@@ -890,23 +930,29 @@ export class BaseProvider extends Provider {
             catch (error) {
                 return logger.throwError("bad result from backend", Logger.errors.SERVER_ERROR, {
                     method: "getStorageAt",
-                    params, result, error
+                    params,
+                    result,
+                    error
                 });
             }
         });
     }
     // This should be called by any subclass wrapping a TransactionResponse
     _wrapTransaction(tx, hash) {
+        console.log("[BASE-PROVIDER] _wrapTransaction tx : ", tx);
+        console.log("[BASE-PROVIDER] _wrapTransaction hash : ", hash);
         if (hash != null && hexDataLength(hash) !== 32) {
             throw new Error("invalid response - sendTransaction");
         }
         const result = tx;
+        console.log("[BASE-PROVIDER] _wrapTransaction result : ", result);
         // Check the hash we expect is the same as the hash the server reported
         if (hash != null && tx.hash !== hash) {
             logger.throwError("Transaction hash mismatch from Provider.sendTransaction.", Logger.errors.UNKNOWN_ERROR, { expectedHash: tx.hash, returnedHash: hash });
         }
         // @TODO: (confirmations? number, timeout? number)
         result.wait = (confirmations) => __awaiter(this, void 0, void 0, function* () {
+            console.log("[BASE-PROVIDER] _wrapTransaction confirmations : ", confirmations);
             // We know this transaction *must* exist (whether it gets mined is
             // another story), so setting an emitted value forces us to
             // wait even if the node returns null for the receipt
@@ -914,6 +960,7 @@ export class BaseProvider extends Provider {
                 this._emitted["t:" + tx.hash] = "pending";
             }
             const receipt = yield this.waitForTransaction(tx.hash, confirmations);
+            console.log("[BASE-PROVIDER] _wrapTransaction receipt : ", receipt);
             if (receipt == null && confirmations === 0) {
                 return null;
             }
@@ -936,7 +983,9 @@ export class BaseProvider extends Provider {
             const hexTx = yield Promise.resolve(signedTransaction).then(t => hexlify(t));
             const tx = this.formatter.transaction(signedTransaction);
             try {
-                const hash = yield this.perform("sendTransaction", { signedTransaction: hexTx });
+                const hash = yield this.perform("sendTransaction", {
+                    signedTransaction: hexTx
+                });
                 return this._wrapTransaction(tx, hash);
             }
             catch (error) {
@@ -950,32 +999,32 @@ export class BaseProvider extends Provider {
         return __awaiter(this, void 0, void 0, function* () {
             const values = yield transaction;
             const tx = {};
-            ["from", "to"].forEach((key) => {
+            ["from", "to"].forEach(key => {
                 if (values[key] == null) {
                     return;
                 }
-                tx[key] = Promise.resolve(values[key]).then((v) => (v ? this._getAddress(v) : null));
+                tx[key] = Promise.resolve(values[key]).then(v => v ? this._getAddress(v) : null);
             });
-            ["gasLimit", "gasPrice", "value"].forEach((key) => {
+            ["gasLimit", "gasPrice", "value"].forEach(key => {
                 if (values[key] == null) {
                     return;
                 }
-                tx[key] = Promise.resolve(values[key]).then((v) => (v ? BigNumber.from(v) : null));
+                tx[key] = Promise.resolve(values[key]).then(v => v ? BigNumber.from(v) : null);
             });
-            ["type"].forEach((key) => {
+            ["type"].forEach(key => {
                 if (values[key] == null) {
                     return;
                 }
-                tx[key] = Promise.resolve(values[key]).then((v) => ((v != null) ? v : null));
+                tx[key] = Promise.resolve(values[key]).then(v => (v != null ? v : null));
             });
             if (values.accessList) {
                 tx.accessList = this.formatter.accessList(values.accessList);
             }
-            ["data"].forEach((key) => {
+            ["data"].forEach(key => {
                 if (values[key] == null) {
                     return;
                 }
-                tx[key] = Promise.resolve(values[key]).then((v) => (v ? hexlify(v) : null));
+                tx[key] = Promise.resolve(values[key]).then(v => (v ? hexlify(v) : null));
             });
             return this.formatter.transactionRequest(yield resolveProperties(tx));
         });
@@ -987,13 +1036,13 @@ export class BaseProvider extends Provider {
             if (filter.address != null) {
                 result.address = this._getAddress(filter.address);
             }
-            ["blockHash", "topics"].forEach((key) => {
+            ["blockHash", "topics"].forEach(key => {
                 if (filter[key] == null) {
                     return;
                 }
                 result[key] = filter[key];
             });
-            ["fromBlock", "toBlock"].forEach((key) => {
+            ["fromBlock", "toBlock"].forEach(key => {
                 if (filter[key] == null) {
                     return;
                 }
@@ -1016,7 +1065,9 @@ export class BaseProvider extends Provider {
             catch (error) {
                 return logger.throwError("bad result from backend", Logger.errors.SERVER_ERROR, {
                     method: "call",
-                    params, result, error
+                    params,
+                    result,
+                    error
                 });
             }
         });
@@ -1034,7 +1085,9 @@ export class BaseProvider extends Provider {
             catch (error) {
                 return logger.throwError("bad result from backend", Logger.errors.SERVER_ERROR, {
                     method: "estimateGas",
-                    params, result, error
+                    params,
+                    result,
+                    error
                 });
             }
         });
@@ -1107,7 +1160,7 @@ export class BaseProvider extends Provider {
                                 blockNumber = yield this._getInternalBlockNumber(100 + 2 * this.pollingInterval);
                             }
                             // Add the confirmations using the fast block number (pessimistic)
-                            let confirmations = (blockNumber - tx.blockNumber) + 1;
+                            let confirmations = blockNumber - tx.blockNumber + 1;
                             if (confirmations <= 0) {
                                 confirmations = 1;
                             }
@@ -1121,7 +1174,7 @@ export class BaseProvider extends Provider {
         });
     }
     getBlock(blockHashOrBlockTag) {
-        return (this._getBlock(blockHashOrBlockTag, false));
+        return this._getBlock(blockHashOrBlockTag, false);
     }
     getBlockWithTransactions(blockHashOrBlockTag) {
         return (this._getBlock(blockHashOrBlockTag, true));
@@ -1130,7 +1183,9 @@ export class BaseProvider extends Provider {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.getNetwork();
             transactionHash = yield transactionHash;
-            const params = { transactionHash: this.formatter.hash(transactionHash, true) };
+            const params = {
+                transactionHash: this.formatter.hash(transactionHash, true)
+            };
             return poll(() => __awaiter(this, void 0, void 0, function* () {
                 const result = yield this.perform("getTransaction", params);
                 if (result == null) {
@@ -1146,7 +1201,7 @@ export class BaseProvider extends Provider {
                 else if (tx.confirmations == null) {
                     const blockNumber = yield this._getInternalBlockNumber(100 + 2 * this.pollingInterval);
                     // Add the confirmations using the fast block number (pessimistic)
-                    let confirmations = (blockNumber - tx.blockNumber) + 1;
+                    let confirmations = blockNumber - tx.blockNumber + 1;
                     if (confirmations <= 0) {
                         confirmations = 1;
                     }
@@ -1158,11 +1213,16 @@ export class BaseProvider extends Provider {
     }
     getTransactionReceipt(transactionHash) {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log("[BASE-PROVIDER] getTransactionReceipt transactionHash : ", transactionHash);
             yield this.getNetwork();
             transactionHash = yield transactionHash;
-            const params = { transactionHash: this.formatter.hash(transactionHash, true) };
+            const params = {
+                transactionHash: this.formatter.hash(transactionHash, true)
+            };
+            console.log("[BASE-PROVIDER] getTransactionReceipt params : ", params);
             return poll(() => __awaiter(this, void 0, void 0, function* () {
                 const result = yield this.perform("getTransactionReceipt", params);
+                console.log("[BASE-PROVIDER] getTransactionReceipt result : ", result);
                 if (result == null) {
                     if (this._emitted["t:" + transactionHash] == null) {
                         return null;
@@ -1174,13 +1234,14 @@ export class BaseProvider extends Provider {
                     return undefined;
                 }
                 const receipt = this.formatter.receipt(result);
+                console.log("[BASE-PROVIDER] getTransactionReceipt receipt : ", receipt);
                 if (receipt.blockNumber == null) {
                     receipt.confirmations = 0;
                 }
                 else if (receipt.confirmations == null) {
                     const blockNumber = yield this._getInternalBlockNumber(100 + 2 * this.pollingInterval);
                     // Add the confirmations using the fast block number (pessimistic)
-                    let confirmations = (blockNumber - receipt.blockNumber) + 1;
+                    let confirmations = blockNumber - receipt.blockNumber + 1;
                     if (confirmations <= 0) {
                         confirmations = 1;
                     }
@@ -1195,7 +1256,7 @@ export class BaseProvider extends Provider {
             yield this.getNetwork();
             const params = yield resolveProperties({ filter: this._getFilter(filter) });
             const logs = yield this.perform("getLogs", params);
-            logs.forEach((log) => {
+            logs.forEach(log => {
                 if (log.removed == null) {
                     log.removed = false;
                 }
@@ -1212,7 +1273,7 @@ export class BaseProvider extends Provider {
     _getBlockTag(blockTag) {
         return __awaiter(this, void 0, void 0, function* () {
             blockTag = yield blockTag;
-            if (typeof (blockTag) === "number" && blockTag < 0) {
+            if (typeof blockTag === "number" && blockTag < 0) {
                 if (blockTag % 1) {
                     logger.throwArgumentError("invalid BlockTag", "blockTag", blockTag);
                 }
@@ -1246,7 +1307,7 @@ export class BaseProvider extends Provider {
             // keccak256("resolver(bytes32)")
             const transaction = {
                 to: network.ensAddress,
-                data: ("0x0178b8bf" + namehash(name).substring(2))
+                data: "0x0178b8bf" + namehash(name).substring(2)
             };
             return this.formatter.callAddress(yield this.call(transaction));
         });
@@ -1264,7 +1325,7 @@ export class BaseProvider extends Provider {
                     throw error;
                 }
             }
-            if (typeof (name) !== "string") {
+            if (typeof name !== "string") {
                 logger.throwArgumentError("invalid ENS name", "name", name);
             }
             // Get the addr from the resovler
@@ -1287,7 +1348,7 @@ export class BaseProvider extends Provider {
             // keccak("name(bytes32)")
             let bytes = arrayify(yield this.call({
                 to: resolverAddress,
-                data: ("0x691f3431" + namehash(reverseName).substring(2))
+                data: "0x691f3431" + namehash(reverseName).substring(2)
             }));
             // Strip off the dynamic string pointer (0x20)
             if (bytes.length < 32 || !BigNumber.from(bytes.slice(0, 32)).eq(32)) {
@@ -1318,10 +1379,10 @@ export class BaseProvider extends Provider {
         return logger.throwError(method + " not implemented", Logger.errors.NOT_IMPLEMENTED, { operation: method });
     }
     _startEvent(event) {
-        this.polling = (this._events.filter((e) => e.pollable()).length > 0);
+        this.polling = this._events.filter(e => e.pollable()).length > 0;
     }
     _stopEvent(event) {
-        this.polling = (this._events.filter((e) => e.pollable()).length > 0);
+        this.polling = this._events.filter(e => e.pollable()).length > 0;
     }
     _addEventListener(eventName, listener, once) {
         const event = new Event(getEventTag(eventName), listener, once);
@@ -1339,7 +1400,7 @@ export class BaseProvider extends Provider {
         let result = false;
         let stopped = [];
         let eventTag = getEventTag(eventName);
-        this._events = this._events.filter((event) => {
+        this._events = this._events.filter(event => {
             if (event.tag !== eventTag) {
                 return true;
             }
@@ -1353,7 +1414,9 @@ export class BaseProvider extends Provider {
             }
             return true;
         });
-        stopped.forEach((event) => { this._stopEvent(event); });
+        stopped.forEach(event => {
+            this._stopEvent(event);
+        });
         return result;
     }
     listenerCount(eventName) {
@@ -1361,18 +1424,18 @@ export class BaseProvider extends Provider {
             return this._events.length;
         }
         let eventTag = getEventTag(eventName);
-        return this._events.filter((event) => {
-            return (event.tag === eventTag);
+        return this._events.filter(event => {
+            return event.tag === eventTag;
         }).length;
     }
     listeners(eventName) {
         if (eventName == null) {
-            return this._events.map((event) => event.listener);
+            return this._events.map(event => event.listener);
         }
         let eventTag = getEventTag(eventName);
         return this._events
-            .filter((event) => (event.tag === eventTag))
-            .map((event) => event.listener);
+            .filter(event => event.tag === eventTag)
+            .map(event => event.listener);
     }
     off(eventName, listener) {
         if (listener == null) {
@@ -1381,7 +1444,7 @@ export class BaseProvider extends Provider {
         const stopped = [];
         let found = false;
         let eventTag = getEventTag(eventName);
-        this._events = this._events.filter((event) => {
+        this._events = this._events.filter(event => {
             if (event.tag !== eventTag || event.listener != listener) {
                 return true;
             }
@@ -1392,7 +1455,9 @@ export class BaseProvider extends Provider {
             stopped.push(event);
             return false;
         });
-        stopped.forEach((event) => { this._stopEvent(event); });
+        stopped.forEach(event => {
+            this._stopEvent(event);
+        });
         return this;
     }
     removeAllListeners(eventName) {
@@ -1403,7 +1468,7 @@ export class BaseProvider extends Provider {
         }
         else {
             const eventTag = getEventTag(eventName);
-            this._events = this._events.filter((event) => {
+            this._events = this._events.filter(event => {
                 if (event.tag !== eventTag) {
                     return true;
                 }
@@ -1411,7 +1476,9 @@ export class BaseProvider extends Provider {
                 return false;
             });
         }
-        stopped.forEach((event) => { this._stopEvent(event); });
+        stopped.forEach(event => {
+            this._stopEvent(event);
+        });
         return this;
     }
 }

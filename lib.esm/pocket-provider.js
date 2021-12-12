@@ -16,7 +16,7 @@ export class PocketProvider extends UrlJsonRpcProvider {
         // We need a bit of creativity in the constructor because
         // Pocket uses different default API keys based on the network
         if (apiKey == null) {
-            const n = getStatic((new.target), "getNetwork")(network);
+            const n = getStatic(new.target, "getNetwork")(network);
             if (n) {
                 const applicationId = defaultApplicationIds[n.name];
                 if (applicationId) {
