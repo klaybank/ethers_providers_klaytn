@@ -15,7 +15,7 @@ import { JsonRpcProvider, JsonRpcSigner } from "./json-rpc-provider";
 type getUrlFunc = (network: Network, apiKey: string) => string | ConnectionInfo;
 
 // A StaticJsonRpcProvider is useful when you *know* for certain that
-// the backend will never change, as it never calls eth_chainId to
+// the backend will never change, as it never calls klay_chainId to
 // verify its backend. However, if the backend does change, the effects
 // are undefined and may include:
 // - inconsistent results

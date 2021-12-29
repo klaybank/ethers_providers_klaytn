@@ -35,7 +35,7 @@ export class CloudflareProvider extends UrlJsonRpcProvider {
             perform: { get: () => super.perform }
         });
         return __awaiter(this, void 0, void 0, function* () {
-            // The Cloudflare provider does not support eth_blockNumber,
+            // The Cloudflare provider does not support klay_blockNumber,
             // so we get the latest block and pull it from that
             if (method === "getBlockNumber") {
                 const block = yield _super.perform.call(this, "getBlock", { blockTag: "latest" });

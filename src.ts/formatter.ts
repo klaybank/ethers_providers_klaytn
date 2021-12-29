@@ -51,7 +51,7 @@ export class Formatter {
         formats.transaction = {
             hash: hash,
 
-            type: Formatter.allowNull(number, null),
+            type: Formatter.allowNull((value) => { value; }, null),
             accessList: Formatter.allowNull(this.accessList.bind(this), null),
 
             blockHash: Formatter.allowNull(hash, null),
@@ -86,7 +86,7 @@ export class Formatter {
             to: Formatter.allowNull(address),
             value: Formatter.allowNull(bigNumber),
             data: Formatter.allowNull(strictData),
-            type: Formatter.allowNull(number),
+            type: Formatter.allowNull((value) => { value; }),
             accessList: Formatter.allowNull(this.accessList.bind(this), null),
         };
 
@@ -115,7 +115,7 @@ export class Formatter {
             logs: Formatter.arrayOf(this.receiptLog.bind(this)),
             blockNumber: number,
             confirmations: Formatter.allowNull(number, null),
-            cumulativeGasUsed: bigNumber,
+            cumulativeGasUsed: Formatter.allowNull(bigNumber, null),
             status: Formatter.allowNull(number)
         };
 
@@ -128,10 +128,10 @@ export class Formatter {
             nonce: Formatter.allowNull(hex),
             difficulty: this.difficulty.bind(this),
 
-            gasLimit: bigNumber,
+            gasLimit: Formatter.allowNull(bigNumber, null),
             gasUsed: bigNumber,
 
-            miner: address,
+            miner: Formatter.allowNull(address, null),
             extraData: data,
 
             transactions: Formatter.allowNull(Formatter.arrayOf(hash)),

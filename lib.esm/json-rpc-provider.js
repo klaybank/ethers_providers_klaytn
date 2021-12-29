@@ -31,13 +31,15 @@ function checkError(method, error, params) {
         }
     }
     let message = error.message;
-    if (error.code === Logger.errors.SERVER_ERROR && error.error && typeof (error.error.message) === "string") {
+    if (error.code === Logger.errors.SERVER_ERROR &&
+        error.error &&
+        typeof error.error.message === "string") {
         message = error.error.message;
     }
-    else if (typeof (error.body) === "string") {
+    else if (typeof error.body === "string") {
         message = error.body;
     }
-    else if (typeof (error.responseText) === "string") {
+    else if (typeof error.responseText === "string") {
         message = error.responseText;
     }
     message = (message || "").toLowerCase();
@@ -45,30 +47,41 @@ function checkError(method, error, params) {
     // "insufficient funds for gas * price + value + cost(data)"
     if (message.match(/insufficient funds/)) {
         logger.throwError("insufficient funds for intrinsic transaction cost", Logger.errors.INSUFFICIENT_FUNDS, {
-            error, method, transaction
+            error,
+            method,
+            transaction
         });
     }
     // "nonce too low"
     if (message.match(/nonce too low/)) {
         logger.throwError("nonce has already been used", Logger.errors.NONCE_EXPIRED, {
-            error, method, transaction
+            error,
+            method,
+            transaction
         });
     }
     // "replacement transaction underpriced"
     if (message.match(/replacement transaction underpriced/)) {
         logger.throwError("replacement fee too low", Logger.errors.REPLACEMENT_UNDERPRICED, {
-            error, method, transaction
+            error,
+            method,
+            transaction
         });
     }
     // "replacement transaction underpriced"
     if (message.match(/only replay-protected/)) {
         logger.throwError("legacy pre-eip-155 transactions not supported", Logger.errors.UNSUPPORTED_OPERATION, {
-            error, method, transaction
+            error,
+            method,
+            transaction
         });
     }
-    if (errorGas.indexOf(method) >= 0 && message.match(/gas required exceeds allowance|always failing transaction|execution reverted/)) {
+    if (errorGas.indexOf(method) >= 0 &&
+        message.match(/gas required exceeds allowance|always failing transaction|execution reverted/)) {
         logger.throwError("cannot estimate gas; transaction may fail or may require manual gas limit", Logger.errors.UNPREDICTABLE_GAS_LIMIT, {
-            error, method, transaction
+            error,
+            method,
+            transaction
         });
     }
     throw error;
@@ -106,11 +119,11 @@ export class JsonRpcSigner extends Signer {
         if (addressOrIndex == null) {
             addressOrIndex = 0;
         }
-        if (typeof (addressOrIndex) === "string") {
+        if (typeof addressOrIndex === "string") {
             defineReadOnly(this, "_address", this.provider.formatter.address(addressOrIndex));
             defineReadOnly(this, "_index", null);
         }
-        else if (typeof (addressOrIndex) === "number") {
+        else if (typeof addressOrIndex === "number") {
             defineReadOnly(this, "_index", addressOrIndex);
             defineReadOnly(this, "_address", null);
         }
@@ -130,7 +143,7 @@ export class JsonRpcSigner extends Signer {
         if (this._address) {
             return Promise.resolve(this._address);
         }
-        return this.provider.send("eth_accounts", []).then((accounts) => {
+        return this.provider.send("klay_accounts", []).then(accounts => {
             if (accounts.length <= this._index) {
                 logger.throwError("unknown account #" + this._index, Logger.errors.UNSUPPORTED_OPERATION, {
                     operation: "getAddress"
@@ -141,13 +154,13 @@ export class JsonRpcSigner extends Signer {
     }
     sendUncheckedTransaction(transaction) {
         transaction = shallowCopy(transaction);
-        const fromAddress = this.getAddress().then((address) => {
+        const fromAddress = this.getAddress().then(address => {
             if (address) {
                 address = address.toLowerCase();
             }
             return address;
         });
-        // The JSON-RPC for eth_sendTransaction uses 90000 gas; if the user
+        // The JSON-RPC for klay_sendTransaction uses 90000 gas; if the user
         // wishes to use this, it is easy to specify explicitly, otherwise
         // we look it up for them.
         if (transaction.gasLimit == null) {
@@ -167,10 +180,12 @@ export class JsonRpcSigner extends Signer {
             else {
                 tx.from = sender;
             }
-            const hexTx = this.provider.constructor.hexlifyTransaction(tx, { from: true });
-            return this.provider.send("eth_sendTransaction", [hexTx]).then((hash) => {
+            const hexTx = this.provider.constructor.hexlifyTransaction(tx, {
+                from: true
+            });
+            return this.provider.send("klay_sendTransaction", [hexTx]).then(hash => {
                 return hash;
-            }, (error) => {
+            }, error => {
                 return checkError("sendTransaction", error, hexTx);
             });
         });
@@ -181,15 +196,21 @@ export class JsonRpcSigner extends Signer {
         });
     }
     sendTransaction(transaction) {
-        return this.sendUncheckedTransaction(transaction).then((hash) => {
+        console.log("[JSON-RPC-PROVIDER] sendTransaction transaction : ", transaction);
+        return this.sendUncheckedTransaction(transaction).then(hash => {
+            console.log("[JSON-RPC-PROVIDER] sendTransaction hash : ", hash);
             return poll(() => {
-                return this.provider.getTransaction(hash).then((tx) => {
+                return this.provider
+                    .getTransaction(hash)
+                    .then((tx) => {
+                    console.log("[JSON-RPC-PROVIDER] sendTransaction tx : ", tx);
                     if (tx === null) {
                         return undefined;
                     }
                     return this.provider._wrapTransaction(tx, hash);
                 });
             }, { onceBlock: this.provider }).catch((error) => {
+                console.log("[JSON-RPC-PROVIDER] sendTransaction error : ", error);
                 error.transactionHash = hash;
                 throw error;
             });
@@ -197,10 +218,13 @@ export class JsonRpcSigner extends Signer {
     }
     signMessage(message) {
         return __awaiter(this, void 0, void 0, function* () {
-            const data = ((typeof (message) === "string") ? toUtf8Bytes(message) : message);
+            const data = typeof message === "string" ? toUtf8Bytes(message) : message;
             const address = yield this.getAddress();
-            // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
-            return yield this.provider.send("eth_sign", [address.toLowerCase(), hexlify(data)]);
+            // https://github.com/ethereum/wiki/wiki/JSON-RPC#klay_sign
+            return yield this.provider.send("klay_sign", [
+                address.toLowerCase(),
+                hexlify(data)
+            ]);
         });
     }
     _signTypedData(domain, types, value) {
@@ -210,7 +234,7 @@ export class JsonRpcSigner extends Signer {
                 return this.provider.resolveName(name);
             });
             const address = yield this.getAddress();
-            return yield this.provider.send("eth_signTypedData_v4", [
+            return yield this.provider.send("klay_signTypedData_v4", [
                 address.toLowerCase(),
                 JSON.stringify(_TypedDataEncoder.getPayload(populated.domain, types, populated.value))
             ]);
@@ -220,13 +244,17 @@ export class JsonRpcSigner extends Signer {
         return __awaiter(this, void 0, void 0, function* () {
             const provider = this.provider;
             const address = yield this.getAddress();
-            return provider.send("personal_unlockAccount", [address.toLowerCase(), password, null]);
+            return provider.send("personal_unlockAccount", [
+                address.toLowerCase(),
+                password,
+                null
+            ]);
         });
     }
 }
 class UncheckedJsonRpcSigner extends JsonRpcSigner {
     sendTransaction(transaction) {
-        return this.sendUncheckedTransaction(transaction).then((hash) => {
+        return this.sendUncheckedTransaction(transaction).then(hash => {
             return {
                 hash: hash,
                 nonce: null,
@@ -237,14 +265,23 @@ class UncheckedJsonRpcSigner extends JsonRpcSigner {
                 chainId: null,
                 confirmations: 0,
                 from: null,
-                wait: (confirmations) => { return this.provider.waitForTransaction(hash, confirmations); }
+                wait: (confirmations) => {
+                    return this.provider.waitForTransaction(hash, confirmations);
+                }
             };
         });
     }
 }
 const allowedTransactionKeys = {
-    chainId: true, data: true, gasLimit: true, gasPrice: true, nonce: true, to: true, value: true,
-    type: true, accessList: true
+    chainId: true,
+    data: true,
+    gasLimit: true,
+    gasPrice: true,
+    nonce: true,
+    to: true,
+    value: true,
+    type: true,
+    accessList: true
 };
 export class JsonRpcProvider extends BaseProvider {
     constructor(url, network) {
@@ -254,9 +291,9 @@ export class JsonRpcProvider extends BaseProvider {
         if (networkOrReady == null) {
             networkOrReady = new Promise((resolve, reject) => {
                 setTimeout(() => {
-                    this.detectNetwork().then((network) => {
+                    this.detectNetwork().then(network => {
                         resolve(network);
-                    }, (error) => {
+                    }, error => {
                         reject(error);
                     });
                 }, 0);
@@ -267,7 +304,7 @@ export class JsonRpcProvider extends BaseProvider {
         if (!url) {
             url = getStatic(this.constructor, "defaultUrl")();
         }
-        if (typeof (url) === "string") {
+        if (typeof url === "string") {
             defineReadOnly(this, "connection", Object.freeze({
                 url: url
             }));
@@ -284,7 +321,7 @@ export class JsonRpcProvider extends BaseProvider {
         return this._eventLoopCache;
     }
     static defaultUrl() {
-        return "http:/\/localhost:8545";
+        return "http://localhost:8545";
     }
     detectNetwork() {
         if (!this._cache["detectNetwork"]) {
@@ -301,7 +338,7 @@ export class JsonRpcProvider extends BaseProvider {
             yield timer(0);
             let chainId = null;
             try {
-                chainId = yield this.send("eth_chainId", []);
+                chainId = yield this.send("klay_chainId", []);
             }
             catch (error) {
                 try {
@@ -334,15 +371,15 @@ export class JsonRpcProvider extends BaseProvider {
         return this.getSigner(addressOrIndex).connectUnchecked();
     }
     listAccounts() {
-        return this.send("eth_accounts", []).then((accounts) => {
-            return accounts.map((a) => this.formatter.address(a));
+        return this.send("klay_accounts", []).then((accounts) => {
+            return accounts.map(a => this.formatter.address(a));
         });
     }
     send(method, params) {
         const request = {
             method: method,
             params: params,
-            id: (this._nextId++),
+            id: this._nextId++,
             jsonrpc: "2.0"
         };
         this.emit("debug", {
@@ -352,11 +389,11 @@ export class JsonRpcProvider extends BaseProvider {
         });
         // We can expand this in the future to any call, but for now these
         // are the biggest wins and do not require any serializing parameters.
-        const cache = (["eth_chainId", "eth_blockNumber"].indexOf(method) >= 0);
+        const cache = ["klay_chainId", "klay_blockNumber"].indexOf(method) >= 0;
         if (cache && this._cache[method]) {
             return this._cache[method];
         }
-        const result = fetchJson(this.connection, JSON.stringify(request), getResult).then((result) => {
+        const result = fetchJson(this.connection, JSON.stringify(request), getResult).then(result => {
             this.emit("debug", {
                 action: "response",
                 request: request,
@@ -364,7 +401,7 @@ export class JsonRpcProvider extends BaseProvider {
                 provider: this
             });
             return result;
-        }, (error) => {
+        }, error => {
             this.emit("debug", {
                 action: "response",
                 error: error,
@@ -385,44 +422,71 @@ export class JsonRpcProvider extends BaseProvider {
     prepareRequest(method, params) {
         switch (method) {
             case "getBlockNumber":
-                return ["eth_blockNumber", []];
+                return ["klay_blockNumber", []];
             case "getGasPrice":
-                return ["eth_gasPrice", []];
+                return ["klay_gasPrice", []];
             case "getBalance":
-                return ["eth_getBalance", [getLowerCase(params.address), params.blockTag]];
+                return [
+                    "klay_getBalance",
+                    [getLowerCase(params.address), params.blockTag]
+                ];
             case "getTransactionCount":
-                return ["eth_getTransactionCount", [getLowerCase(params.address), params.blockTag]];
+                return [
+                    "klay_getTransactionCount",
+                    [getLowerCase(params.address), params.blockTag]
+                ];
             case "getCode":
-                return ["eth_getCode", [getLowerCase(params.address), params.blockTag]];
+                return [
+                    "klay_getCode",
+                    [getLowerCase(params.address), params.blockTag]
+                ];
             case "getStorageAt":
-                return ["eth_getStorageAt", [getLowerCase(params.address), params.position, params.blockTag]];
+                return [
+                    "klay_getStorageAt",
+                    [getLowerCase(params.address), params.position, params.blockTag]
+                ];
             case "sendTransaction":
-                return ["eth_sendRawTransaction", [params.signedTransaction]];
+                return ["klay_sendRawTransaction", [params.signedTransaction]];
             case "getBlock":
                 if (params.blockTag) {
-                    return ["eth_getBlockByNumber", [params.blockTag, !!params.includeTransactions]];
+                    return [
+                        "klay_getBlockByNumber",
+                        [params.blockTag, !!params.includeTransactions]
+                    ];
                 }
                 else if (params.blockHash) {
-                    return ["eth_getBlockByHash", [params.blockHash, !!params.includeTransactions]];
+                    return [
+                        "klay_getBlockByHash",
+                        [params.blockHash, !!params.includeTransactions]
+                    ];
                 }
                 return null;
             case "getTransaction":
-                return ["eth_getTransactionByHash", [params.transactionHash]];
+                return ["klay_getTransactionByHash", [params.transactionHash]];
             case "getTransactionReceipt":
-                return ["eth_getTransactionReceipt", [params.transactionHash]];
+                return ["klay_getTransactionReceipt", [params.transactionHash]];
             case "call": {
                 const hexlifyTransaction = getStatic(this.constructor, "hexlifyTransaction");
-                return ["eth_call", [hexlifyTransaction(params.transaction, { from: true }), params.blockTag]];
+                return [
+                    "klay_call",
+                    [
+                        hexlifyTransaction(params.transaction, { from: true }),
+                        params.blockTag
+                    ]
+                ];
             }
             case "estimateGas": {
                 const hexlifyTransaction = getStatic(this.constructor, "hexlifyTransaction");
-                return ["eth_estimateGas", [hexlifyTransaction(params.transaction, { from: true })]];
+                return [
+                    "klay_estimateGas",
+                    [hexlifyTransaction(params.transaction, { from: true })]
+                ];
             }
             case "getLogs":
                 if (params.filter && params.filter.address != null) {
                     params.filter.address = getLowerCase(params.filter.address);
                 }
-                return ["eth_getLogs", [params.filter]];
+                return ["klay_getLogs", [params.filter]];
             default:
                 break;
         }
@@ -453,11 +517,14 @@ export class JsonRpcProvider extends BaseProvider {
             return;
         }
         const self = this;
-        const pendingFilter = this.send("eth_newPendingTransactionFilter", []);
+        const pendingFilter = this.send("klay_newPendingTransactionFilter", []);
         this._pendingFilter = pendingFilter;
-        pendingFilter.then(function (filterId) {
+        pendingFilter
+            .then(function (filterId) {
             function poll() {
-                self.send("eth_getFilterChanges", [filterId]).then(function (hashes) {
+                self
+                    .send("klay_getFilterChanges", [filterId])
+                    .then(function (hashes) {
                     if (self._pendingFilter != pendingFilter) {
                         return null;
                     }
@@ -475,18 +542,23 @@ export class JsonRpcProvider extends BaseProvider {
                     return seq.then(function () {
                         return timer(1000);
                     });
-                }).then(function () {
+                })
+                    .then(function () {
                     if (self._pendingFilter != pendingFilter) {
-                        self.send("eth_uninstallFilter", [filterId]);
+                        self.send("klay_uninstallFilter", [filterId]);
                         return;
                     }
-                    setTimeout(function () { poll(); }, 0);
+                    setTimeout(function () {
+                        poll();
+                    }, 0);
                     return null;
-                }).catch((error) => { });
+                })
+                    .catch((error) => { });
             }
             poll();
             return filterId;
-        }).catch((error) => { });
+        })
+            .catch((error) => { });
     }
     _stopEvent(event) {
         if (event.tag === "pending" && this.listenerCount("pending") === 0) {

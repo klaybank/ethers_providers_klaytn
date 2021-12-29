@@ -235,11 +235,11 @@ export class EtherscanProvider extends BaseProvider{
 
         switch (method) {
             case "getBlockNumber":
-                url += "?module=proxy&action=eth_blockNumber" + apiKey;
+                url += "?module=proxy&action=klay_blockNumber" + apiKey;
                 return get(url, null);
 
             case "getGasPrice":
-                url += "?module=proxy&action=eth_gasPrice" + apiKey;
+                url += "?module=proxy&action=klay_gasPrice" + apiKey;
                 return get(url, null);
 
             case "getBalance":
@@ -249,18 +249,18 @@ export class EtherscanProvider extends BaseProvider{
                 return get(url, null, getResult);
 
             case "getTransactionCount":
-                url += "?module=proxy&action=eth_getTransactionCount&address=" + params.address;
+                url += "?module=proxy&action=klay_getTransactionCount&address=" + params.address;
                 url += "&tag=" + params.blockTag + apiKey;
                 return get(url, null);
 
 
             case "getCode":
-                url += "?module=proxy&action=eth_getCode&address=" + params.address;
+                url += "?module=proxy&action=klay_getCode&address=" + params.address;
                 url += "&tag=" + params.blockTag + apiKey;
                 return get(url, null);
 
             case "getStorageAt":
-                url += "?module=proxy&action=eth_getStorageAt&address=" + params.address;
+                url += "?module=proxy&action=klay_getStorageAt&address=" + params.address;
                 url += "&position=" + params.position;
                 url += "&tag=" + params.blockTag + apiKey;
                 return get(url, null);
@@ -269,7 +269,7 @@ export class EtherscanProvider extends BaseProvider{
             case "sendTransaction":
                 return get(url, {
                     module: "proxy",
-                    action: "eth_sendRawTransaction",
+                    action: "klay_sendRawTransaction",
                     hex: params.signedTransaction,
                     apikey: this.apiKey
                 }).catch((error) => {
@@ -278,7 +278,7 @@ export class EtherscanProvider extends BaseProvider{
 
             case "getBlock":
                 if (params.blockTag) {
-                    url += "?module=proxy&action=eth_getBlockByNumber&tag=" + params.blockTag;
+                    url += "?module=proxy&action=klay_getBlockByNumber&tag=" + params.blockTag;
                     if (params.includeTransactions) {
                         url += "&boolean=true";
                     } else {
@@ -290,12 +290,12 @@ export class EtherscanProvider extends BaseProvider{
                 throw new Error("getBlock by blockHash not implemented");
 
             case "getTransaction":
-                url += "?module=proxy&action=eth_getTransactionByHash&txhash=" + params.transactionHash;
+                url += "?module=proxy&action=klay_getTransactionByHash&txhash=" + params.transactionHash;
                 url += apiKey;
                 return get(url, null);
 
             case "getTransactionReceipt":
-                url += "?module=proxy&action=eth_getTransactionReceipt&txhash=" + params.transactionHash;
+                url += "?module=proxy&action=klay_getTransactionReceipt&txhash=" + params.transactionHash;
                 url += apiKey;
                 return get(url, null);
 
@@ -307,7 +307,7 @@ export class EtherscanProvider extends BaseProvider{
 
                 const postData = getTransactionPostData(params.transaction);
                 postData.module = "proxy";
-                postData.action = "eth_call";
+                postData.action = "klay_call";
                 postData.apikey = this.apiKey;
 
                 try {
@@ -320,7 +320,7 @@ export class EtherscanProvider extends BaseProvider{
             case "estimateGas": {
                 const postData = getTransactionPostData(params.transaction);
                 postData.module = "proxy";
-                postData.action = "eth_estimateGas";
+                postData.action = "klay_estimateGas";
                 postData.apikey = this.apiKey;
 
                 try {
